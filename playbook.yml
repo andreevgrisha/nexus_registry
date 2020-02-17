@@ -1,0 +1,53 @@
+---
+# Install and run Nexus repository as service
+
+- hosts: 127.0.0.1
+  connection: local
+  become: yes
+  become_user: root
+
+  tasks:
+
+   - name: check nexus group
+     group:
+       name: nexus
+       state: present
+
+   - name: check nexus user
+     user:
+       name: nexus
+       group: nexus
+       home: /opt/registry/sonatype-work/nexus3
+       shell: /sbin/nologin 
+
+   - name: check java runtime
+     yum:
+       name: java-1.8.0-openjdk
+       state: present   
+
+   - name: provide path for installation nexus
+     file:
+       path: /opt/registry
+       state: directory
+       mode: 0774
+       group: nexus
+       owner: root
+       
+   - name: get and install nexus
+     unarchive:
+        src: https://download.sonatype.com/nexus/3/latest-unix.tar.gz
+        dest: /opt/registry
+        remote_src: yes 
+
+   - name: copy  nexus as service  
+     copy:
+        src: /home/gri/ansible/nexus/nexus.service
+        dest: /etc/systemd/system/nexus.service  
+   - name: run nexus as serice
+     shell: |
+           printf 'run_as_user="nexus"' > /opt/registry/nexus-3.20.1-01/bin/nexus.rc
+           systemctl daemon-reload
+           systemctl enable nexus.service
+           systemctl start nexus.service
+
+...
