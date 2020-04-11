@@ -17,7 +17,7 @@
      user:
        name: nexus
        group: nexus
-       home: /opt/registry/sonatype-work/nexus3
+       home: /opt/sonatype-work/nexus3
        shell: /sbin/nologin 
 
    - name: check java runtime
@@ -25,9 +25,17 @@
        name: java-1.8.0-openjdk
        state: present   
 
-   - name: provide path for installation nexus
+   - name: provide path for sonatype-work
      file:
-       path: /opt/registry
+       path: /opt/sonatype-work
+       state: directory
+       mode: 0774
+       group: nexus
+       owner: root
+
+   - name: provide path for nexus
+     file:
+       path: /opt/nexus-3.20.1-01
        state: directory
        mode: 0774
        group: nexus
@@ -35,19 +43,33 @@
        
    - name: get and install nexus
      unarchive:
-        src: https://download.sonatype.com/nexus/3/latest-unix.tar.gz
-        dest: /opt/registry
+        src: http://download.sonatype.com/nexus/3/nexus-3.20.1-01-unix.tar.gz
+        dest: /opt
         remote_src: yes 
+     run_once: true
 
    - name: copy  nexus as service  
      copy:
-        src: /home/gri/ansible/nexus/nexus.service
+        src: /home/gri/nexus_registry/nexus.service
         dest: /etc/systemd/system/nexus.service  
+                
    - name: run nexus as serice
      shell: |
-           printf 'run_as_user="nexus"' > /opt/registry/nexus-3.20.1-01/bin/nexus.rc
+           printf 'run_as_user="nexus"' > /opt/nexus-3.20.1-01/bin/nexus.rc
            systemctl daemon-reload
            systemctl enable nexus.service
            systemctl start nexus.service
+
+   - name: allow 8081 port
+     firewalld:
+         port: 8081/tcp
+         permanent: yes
+         state: enabled
+     notify: reload firewall
+
+  handlers:
+
+      - name: reload firewall
+        command: firewall-cmd --reload
 
 ...
